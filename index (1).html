@@ -1,0 +1,1589 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ТЗ — Задачи сервера</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Geologica:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --bg: #08080c;
+  --bg2: #0c0c12;
+  --surface: #111118;
+  --surface2: #17171f;
+  --surface3: #1e1e28;
+  --surface4: #252532;
+  --border: rgba(255,255,255,0.06);
+  --border-hover: rgba(255,255,255,0.12);
+  --text: #e8e8f0;
+  --text2: #c8c8d4;
+  --muted: #5a5a6e;
+  --muted2: #8888a0;
+
+  --accent: #6c5ce7;
+  --accent2: #a78bfa;
+  --accent-bg: rgba(108,92,231,0.1);
+  --accent-glow: rgba(108,92,231,0.3);
+
+  --fix: #ff6b6b;
+  --fix-bg: rgba(255,107,107,0.08);
+  --feat: #51cf66;
+  --feat-bg: rgba(81,207,102,0.08);
+  --event: #ffa94d;
+  --event-bg: rgba(255,169,77,0.08);
+  --bal: #cc5de8;
+  --bal-bg: rgba(204,93,232,0.08);
+
+  --admin: #74b9ff;
+  --admin-bg: rgba(116,185,255,0.08);
+
+  --radius: 12px;
+  --radius-lg: 16px;
+  --radius-xl: 20px;
+}
+
+html { scroll-behavior: smooth; }
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'Geologica', sans-serif;
+  font-weight: 300;
+  min-height: 100vh;
+  line-height: 1.6;
+  overflow-x: hidden;
+}
+
+.bg-glow {
+  position: fixed;
+  width: 600px; height: 600px;
+  border-radius: 50%;
+  filter: blur(150px);
+  opacity: 0.07;
+  pointer-events: none;
+  z-index: 0;
+}
+.bg-glow-1 { top: -200px; left: -100px; background: var(--accent); }
+.bg-glow-2 { bottom: -200px; right: -100px; background: #6c5ce7; }
+.bg-glow-3 { top: 40%; left: 50%; transform: translateX(-50%); background: var(--accent2); opacity: 0.04; }
+
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.03'/%3E%3C/svg%3E");
+  pointer-events: none;
+  z-index: 9999;
+}
+
+::-webkit-scrollbar { width: 5px; }
+::-webkit-scrollbar-track { background: var(--bg); }
+::-webkit-scrollbar-thumb { background: var(--surface3); border-radius: 3px; }
+
+.container { max-width: 880px; margin: 0 auto; padding: 0 24px; position: relative; z-index: 1; }
+
+/* ═══ AUTH ═══ */
+.auth-screen {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  position: relative;
+}
+.auth-card {
+  width: 100%;
+  max-width: 420px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-xl);
+  padding: 40px 36px;
+  position: relative;
+  overflow: hidden;
+  animation: cardIn 0.5s ease both;
+}
+@keyframes cardIn {
+  from { opacity: 0; transform: translateY(20px) scale(0.97); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+.auth-card::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, var(--accent), var(--accent2), transparent);
+  opacity: 0.6;
+}
+.auth-logo {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+.auth-logo-dot {
+  width: 10px; height: 10px;
+  border-radius: 50%;
+  background: var(--accent);
+  box-shadow: 0 0 16px var(--accent-glow);
+  animation: pulse 2.5s ease-in-out infinite;
+}
+@keyframes pulse {
+  0%,100% { opacity: 1; }
+  50% { opacity: 0.4; }
+}
+.auth-logo-text {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.auth-title {
+  font-size: 24px;
+  font-weight: 600;
+  margin-bottom: 6px;
+  background: linear-gradient(135deg, var(--text), var(--accent2));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+.auth-subtitle {
+  font-size: 13px;
+  color: var(--muted2);
+  margin-bottom: 28px;
+}
+.auth-form { display: flex; flex-direction: column; gap: 16px; }
+.field-group { position: relative; }
+.field-label {
+  display: block;
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-bottom: 7px;
+  font-family: 'JetBrains Mono', monospace;
+}
+.field-input {
+  width: 100%;
+  padding: 11px 14px;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  color: var(--text);
+  font-family: 'Geologica', sans-serif;
+  font-size: 14px;
+  font-weight: 300;
+  outline: none;
+  transition: all 0.2s;
+}
+.field-input:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px rgba(108,92,231,0.1);
+}
+.field-input::placeholder { color: var(--muted); }
+.auth-error {
+  font-size: 12px;
+  color: var(--fix);
+  font-family: 'JetBrains Mono', monospace;
+  min-height: 16px;
+  text-align: center;
+}
+.btn-main {
+  width: 100%;
+  padding: 12px;
+  background: linear-gradient(135deg, var(--accent), #7c6cf0);
+  border: none;
+  border-radius: var(--radius);
+  color: #fff;
+  font-family: 'Geologica', sans-serif;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.btn-main:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 8px 24px rgba(108,92,231,0.3);
+}
+.btn-main:active { transform: translateY(0); }
+.auth-switch {
+  text-align: center;
+  margin-top: 20px;
+  font-size: 13px;
+  color: var(--muted2);
+}
+.auth-switch a {
+  color: var(--accent2);
+  cursor: pointer;
+  text-decoration: none;
+  transition: color 0.2s;
+}
+.auth-switch a:hover { color: var(--accent); }
+
+/* ═══ APP ═══ */
+.app-wrapper { display: none; min-height: 100vh; }
+.app-header {
+  padding: 24px 0;
+  border-bottom: 1px solid var(--border);
+  backdrop-filter: blur(12px);
+  background: rgba(8,8,12,0.8);
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
+.header-inner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+.header-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.header-dot {
+  width: 8px; height: 8px;
+  border-radius: 50%;
+  background: var(--accent);
+  box-shadow: 0 0 12px var(--accent-glow);
+  animation: pulse 2.5s ease-in-out infinite;
+  flex-shrink: 0;
+}
+.header-dot.admin-active {
+  background: var(--admin);
+  box-shadow: 0 0 12px rgba(116,185,255,0.4);
+}
+.header-brand {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--muted2);
+}
+.header-brand strong {
+  color: var(--text);
+  font-weight: 500;
+}
+.header-right {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.admin-tag {
+  display: none;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 10px;
+  border-radius: 20px;
+  border: 1px solid var(--admin);
+  background: var(--admin-bg);
+  color: var(--admin);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+.admin-tag.visible { display: flex; }
+.admin-tag-dot {
+  width: 5px; height: 5px;
+  border-radius: 50%;
+  background: var(--admin);
+  animation: pulse 1.5s ease-in-out infinite;
+}
+.profile-btn {
+  width: 36px; height: 36px;
+  border-radius: 50%;
+  border: 2px solid var(--border-hover);
+  background: var(--surface2);
+  cursor: pointer;
+  overflow: hidden;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--muted);
+  font-size: 16px;
+  position: relative;
+}
+.profile-btn:hover { border-color: var(--accent); }
+.profile-btn img { width: 100%; height: 100%; object-fit: cover; }
+.profile-dropdown {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  width: 280px;
+  background: var(--surface);
+  border: 1px solid var(--border-hover);
+  border-radius: var(--radius-lg);
+  padding: 16px;
+  opacity: 0;
+  pointer-events: none;
+  transform: translateY(-8px);
+  transition: all 0.2s;
+  z-index: 200;
+}
+.profile-dropdown.open {
+  opacity: 1;
+  pointer-events: all;
+  transform: translateY(0);
+}
+.pd-user {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding-bottom: 14px;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 10px;
+}
+.pd-avatar {
+  width: 44px; height: 44px;
+  border-radius: 50%;
+  border: 2px solid var(--accent);
+  background: var(--surface2);
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--muted);
+  font-size: 20px;
+  cursor: pointer;
+  position: relative;
+  flex-shrink: 0;
+  transition: border-color 0.2s;
+}
+.pd-avatar:hover { border-color: var(--accent2); }
+.pd-avatar img { width: 100%; height: 100%; object-fit: cover; }
+.pd-avatar-overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(0,0,0,0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  transition: opacity 0.2s;
+  border-radius: 50%;
+  font-size: 14px;
+  color: #fff;
+}
+.pd-avatar:hover .pd-avatar-overlay { opacity: 1; }
+.pd-name { font-size: 14px; font-weight: 500; color: var(--text); }
+.pd-role {
+  font-size: 11px;
+  color: var(--muted);
+  font-family: 'JetBrains Mono', monospace;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+.pd-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 9px 10px;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--muted2);
+  font-family: 'Geologica', sans-serif;
+  font-size: 13px;
+  font-weight: 400;
+  cursor: pointer;
+  transition: all 0.15s;
+  text-align: left;
+}
+.pd-item:hover { background: var(--surface2); color: var(--text); }
+.pd-item.danger:hover { background: var(--fix-bg); color: var(--fix); }
+.pd-item svg { flex-shrink: 0; }
+.pd-divider { height: 1px; background: var(--border); margin: 6px 0; }
+
+/* ═══ ACCESS DENIED ═══ */
+.access-denied {
+  display: none;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 80px 24px;
+  min-height: 60vh;
+}
+.access-denied.visible { display: flex; }
+.ad-icon {
+  width: 80px; height: 80px;
+  border-radius: 50%;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 36px;
+  margin-bottom: 24px;
+  animation: cardIn 0.5s ease both;
+}
+.ad-title { font-size: 22px; font-weight: 600; margin-bottom: 8px; color: var(--text); }
+.ad-desc { font-size: 14px; color: var(--muted2); max-width: 400px; margin-bottom: 24px; line-height: 1.7; }
+.ad-pass-form { display: flex; gap: 8px; max-width: 340px; width: 100%; }
+.ad-pass-form .field-input {
+  flex: 1;
+  text-align: center;
+  font-family: 'JetBrains Mono', monospace;
+  letter-spacing: 0.1em;
+}
+.btn-sm {
+  padding: 10px 20px;
+  background: var(--accent);
+  border: none;
+  border-radius: var(--radius);
+  color: #fff;
+  font-family: 'Geologica', sans-serif;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+  white-space: nowrap;
+}
+.btn-sm:hover { background: #7c6cf0; }
+
+/* ═══ TASKS ═══ */
+.tasks-content { display: none; }
+.tasks-content.visible { display: block; }
+.tasks-hero { padding: 36px 0 24px; }
+.tasks-hero-inner {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+.tasks-hero h1 {
+  font-size: clamp(22px, 4vw, 30px);
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  background: linear-gradient(135deg, var(--text), var(--accent2));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  margin-bottom: 4px;
+}
+.tasks-hero-sub { font-size: 13px; color: var(--muted2); }
+.stats-row { display: flex; gap: 20px; flex-wrap: wrap; }
+.stat { text-align: right; }
+.stat-num {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 20px;
+  font-weight: 500;
+  color: var(--text);
+  line-height: 1.1;
+}
+.stat-label {
+  font-size: 10px;
+  color: var(--muted);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  font-family: 'JetBrains Mono', monospace;
+}
+.toolbar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 16px 0;
+  flex-wrap: wrap;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 16px;
+}
+.toolbar-label {
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-right: 2px;
+  font-family: 'JetBrains Mono', monospace;
+}
+.chip {
+  padding: 5px 14px;
+  border-radius: 20px;
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--muted2);
+  font-family: 'Geologica', sans-serif;
+  font-size: 12px;
+  font-weight: 400;
+  cursor: pointer;
+  transition: all 0.18s;
+  white-space: nowrap;
+}
+.chip:hover { border-color: var(--border-hover); color: var(--text); }
+.chip.active { border-color: var(--accent); color: var(--accent); background: var(--accent-bg); }
+.chip[data-cat="fix"].active { border-color: var(--fix); color: var(--fix); background: var(--fix-bg); }
+.chip[data-cat="feature"].active { border-color: var(--feat); color: var(--feat); background: var(--feat-bg); }
+.chip[data-cat="event"].active { border-color: var(--event); color: var(--event); background: var(--event-bg); }
+.chip[data-cat="balance"].active { border-color: var(--bal); color: var(--bal); background: var(--bal-bg); }
+.search-wrap { position: relative; margin-bottom: 12px; }
+.search-icon {
+  position: absolute;
+  left: 14px; top: 50%;
+  transform: translateY(-50%);
+  color: var(--muted);
+  pointer-events: none;
+}
+#search {
+  width: 100%;
+  padding: 10px 14px 10px 40px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  color: var(--text);
+  font-family: 'Geologica', sans-serif;
+  font-size: 14px;
+  font-weight: 300;
+  outline: none;
+  transition: all 0.2s;
+}
+#search::placeholder { color: var(--muted); }
+#search:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(108,92,231,0.08); }
+.admin-bar {
+  display: none;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px;
+  border: 1px solid rgba(116,185,255,0.15);
+  border-radius: var(--radius);
+  background: rgba(116,185,255,0.04);
+  margin-bottom: 12px;
+  font-size: 12px;
+  color: var(--admin);
+  font-family: 'JetBrains Mono', monospace;
+  letter-spacing: 0.02em;
+}
+.admin-bar.visible { display: flex; }
+.admin-bar-close {
+  margin-left: auto;
+  cursor: pointer;
+  color: var(--muted);
+  font-size: 14px;
+  transition: color 0.15s;
+  background: none;
+  border: none;
+}
+.admin-bar-close:hover { color: var(--text); }
+.add-task-btn {
+  display: none;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 12px 16px;
+  margin-bottom: 8px;
+  border: 1px dashed rgba(108,92,231,0.3);
+  border-radius: var(--radius);
+  background: rgba(108,92,231,0.03);
+  color: var(--accent2);
+  font-family: 'Geologica', sans-serif;
+  font-size: 14px;
+  font-weight: 400;
+  cursor: pointer;
+  transition: all 0.18s;
+  text-align: left;
+}
+.add-task-btn:hover {
+  border-color: rgba(108,92,231,0.5);
+  background: rgba(108,92,231,0.06);
+}
+.add-task-btn.visible { display: flex; }
+#list { margin-top: 4px; }
+.task {
+  display: grid;
+  grid-template-columns: 44px 1fr auto;
+  gap: 0 14px;
+  align-items: start;
+  padding: 14px 16px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  margin-bottom: 6px;
+  background: var(--surface);
+  cursor: pointer;
+  transition: all 0.2s;
+  animation: fadeIn 0.3s ease both;
+}
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.task:hover { border-color: var(--border-hover); background: var(--surface2); transform: translateX(2px); }
+.task.expanded { border-color: var(--border-hover); background: var(--surface2); }
+.task-id {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  color: var(--muted);
+  padding-top: 3px;
+  user-select: none;
+}
+.task-main { min-width: 0; }
+.task-title { font-size: 14px; font-weight: 500; color: var(--text); margin-bottom: 2px; }
+.task-desc {
+  font-size: 13px;
+  color: var(--muted2);
+  max-height: 0;
+  overflow: hidden;
+  transition: max-height 0.3s ease, margin-top 0.3s ease;
+}
+.task.expanded .task-desc { max-height: 300px; margin-top: 6px; }
+.task-right { display: flex; flex-direction: column; align-items: flex-end; gap: 6px; }
+.task-badge {
+  padding: 3px 10px;
+  border-radius: 20px;
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+}
+.badge-fix { background: var(--fix-bg); color: var(--fix); border: 1px solid rgba(255,107,107,0.2); }
+.badge-feature { background: var(--feat-bg); color: var(--feat); border: 1px solid rgba(81,207,102,0.2); }
+.badge-event { background: var(--event-bg); color: var(--event); border: 1px solid rgba(255,169,77,0.2); }
+.badge-balance { background: var(--bal-bg); color: var(--bal); border: 1px solid rgba(204,93,232,0.2); }
+.task-actions { display: none; gap: 4px; }
+.task-actions.visible { display: flex; }
+.task-action-btn {
+  width: 28px; height: 28px;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  background: var(--surface3);
+  color: var(--muted2);
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  transition: all 0.15s;
+  flex-shrink: 0;
+}
+.task-action-btn:hover { border-color: var(--border-hover); color: var(--text); }
+.task-action-btn.del:hover { border-color: rgba(255,107,107,0.4); color: var(--fix); background: var(--fix-bg); }
+.task-action-btn.edit:hover { border-color: rgba(108,92,231,0.4); color: var(--accent); background: var(--accent-bg); }
+.check {
+  display: flex;
+  width: 22px; height: 22px;
+  border-radius: 6px;
+  border: 1.5px solid var(--border-hover);
+  margin-bottom: 4px;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s;
+  font-size: 11px;
+  color: transparent;
+}
+.check:hover { border-color: var(--feat); }
+.task.done .check { background: var(--feat); border-color: var(--feat); color: var(--bg); }
+.task.done .task-title { text-decoration: line-through; color: var(--muted); }
+.task.done .task-badge { opacity: 0.4; }
+.empty { text-align: center; padding: 60px 0; color: var(--muted); font-size: 14px; }
+.app-footer {
+  border-top: 1px solid var(--border);
+  padding: 20px 0;
+  margin-top: 40px;
+}
+.footer-inner {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.footer-text {
+  font-size: 11px;
+  color: var(--muted);
+  font-family: 'JetBrains Mono', monospace;
+}
+
+/* ═══ MODALS ═══ */
+.modal-overlay {
+  position: fixed; inset: 0;
+  background: rgba(0,0,0,0.75);
+  backdrop-filter: blur(8px);
+  display: flex; align-items: center; justify-content: center;
+  z-index: 1000;
+  padding: 24px;
+  opacity: 0; pointer-events: none;
+  transition: opacity 0.2s;
+}
+.modal-overlay.open { opacity: 1; pointer-events: all; }
+.modal {
+  background: var(--surface);
+  border: 1px solid var(--border-hover);
+  border-radius: var(--radius-xl);
+  padding: 28px;
+  width: 100%;
+  max-width: 520px;
+  transform: translateY(12px);
+  transition: transform 0.2s;
+  position: relative;
+}
+.modal::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--accent), transparent);
+  opacity: 0.4;
+}
+.modal-overlay.open .modal { transform: translateY(0); }
+.modal-header {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: 22px;
+}
+.modal-title { font-size: 16px; font-weight: 500; color: var(--text); }
+.modal-close {
+  width: 32px; height: 32px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--muted2);
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  transition: all 0.15s;
+  font-size: 16px;
+}
+.modal-close:hover { border-color: var(--border-hover); color: var(--text); }
+.form-field { margin-bottom: 16px; }
+.form-label {
+  display: block;
+  font-size: 11px; font-weight: 500;
+  letter-spacing: 0.08em; text-transform: uppercase;
+  color: var(--muted);
+  margin-bottom: 7px;
+  font-family: 'JetBrains Mono', monospace;
+}
+.form-input, .form-textarea, .form-select {
+  width: 100%;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--text);
+  font-family: 'Geologica', sans-serif;
+  font-size: 14px;
+  font-weight: 300;
+  padding: 10px 12px;
+  outline: none;
+  transition: all 0.2s;
+}
+.form-input:focus, .form-textarea:focus, .form-select:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px rgba(108,92,231,0.08);
+}
+.form-input::placeholder, .form-textarea::placeholder { color: var(--muted); }
+.form-textarea { resize: vertical; min-height: 90px; }
+.form-select option { background: var(--surface2); }
+.form-row { display: flex; gap: 12px; }
+.form-row .form-field { flex: 1; }
+.modal-footer {
+  display: flex; gap: 10px; justify-content: flex-end;
+  margin-top: 24px;
+}
+.btn {
+  padding: 9px 20px;
+  border-radius: 8px;
+  font-family: 'Geologica', sans-serif;
+  font-size: 14px;
+  font-weight: 400;
+  cursor: pointer;
+  transition: all 0.18s;
+  border: none;
+}
+.btn-ghost {
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--muted2);
+}
+.btn-ghost:hover { border-color: var(--border-hover); color: var(--text); }
+.btn-primary { background: var(--accent); color: #fff; font-weight: 500; }
+.btn-primary:hover { opacity: 0.88; }
+.btn-danger { background: var(--fix); color: #fff; font-weight: 500; }
+.btn-danger:hover { opacity: 0.88; }
+.confirm-text { font-size: 14px; color: var(--muted2); line-height: 1.6; margin-bottom: 4px; }
+.confirm-task-title {
+  font-size: 13px; color: var(--text);
+  font-weight: 500;
+  padding: 10px 12px;
+  background: var(--surface2);
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  margin-top: 10px;
+}
+.user-list-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  margin-bottom: 6px;
+  background: var(--surface2);
+}
+.user-list-name { font-size: 13px; font-weight: 400; color: var(--text); }
+.user-list-status {
+  font-size: 11px;
+  font-family: 'JetBrains Mono', monospace;
+  padding: 3px 8px;
+  border-radius: 12px;
+}
+.user-list-status.has-pass {
+  background: var(--feat-bg);
+  color: var(--feat);
+  border: 1px solid rgba(81,207,102,0.2);
+}
+.user-list-status.no-pass {
+  background: var(--fix-bg);
+  color: var(--fix);
+  border: 1px solid rgba(255,107,107,0.2);
+}
+.toggle-pass-btn {
+  padding: 4px 10px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--muted2);
+  font-family: 'Geologica', sans-serif;
+  font-size: 12px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.toggle-pass-btn:hover { border-color: var(--accent); color: var(--accent); }
+.toggle-pass-btn.revoke { border-color: rgba(255,107,107,0.3); color: var(--fix); }
+.toggle-pass-btn.revoke:hover { background: var(--fix-bg); }
+
+@media (max-width: 600px) {
+  .auth-card { padding: 28px 24px; }
+  .header-brand { display: none; }
+  .stats-row { gap: 12px; }
+  .ad-pass-form { flex-direction: column; }
+}
+</style>
+</head>
+<body>
+
+<div class="bg-glow bg-glow-1"></div>
+<div class="bg-glow bg-glow-2"></div>
+<div class="bg-glow bg-glow-3"></div>
+
+<!-- AUTH -->
+<div class="auth-screen" id="authScreen">
+  <div class="auth-card" id="authCard">
+    <div id="loginView">
+      <div class="auth-logo">
+        <div class="auth-logo-dot"></div>
+        <span class="auth-logo-text">Задачи сервера</span>
+      </div>
+      <div class="auth-title">Вход</div>
+      <div class="auth-subtitle">Войдите для доступа к панели задач</div>
+      <div class="auth-form">
+        <div class="field-group">
+          <label class="field-label">Логин</label>
+          <input class="field-input" type="text" id="loginUsername" placeholder="Введите логин..." autocomplete="off">
+        </div>
+        <div class="field-group">
+          <label class="field-label">Пароль</label>
+          <input class="field-input" type="password" id="loginPassword" placeholder="Введите пароль..." onkeydown="if(event.key==='Enter')doLogin()">
+        </div>
+        <div class="auth-error" id="loginError"></div>
+        <button class="btn-main" onclick="doLogin()">Войти</button>
+      </div>
+      <div class="auth-switch">Нет аккаунта? <a onclick="showRegister()">Зарегистрироваться</a></div>
+    </div>
+    <div id="registerView" style="display:none">
+      <div class="auth-logo">
+        <div class="auth-logo-dot"></div>
+        <span class="auth-logo-text">Задачи сервера</span>
+      </div>
+      <div class="auth-title">Регистрация</div>
+      <div class="auth-subtitle">Создайте аккаунт для работы с задачами</div>
+      <div class="auth-form">
+        <div class="field-group">
+          <label class="field-label">Логин</label>
+          <input class="field-input" type="text" id="regUsername" placeholder="Придумайте логин..." autocomplete="off">
+        </div>
+        <div class="field-group">
+          <label class="field-label">Пароль</label>
+          <input class="field-input" type="password" id="regPassword" placeholder="Придумайте пароль...">
+        </div>
+        <div class="field-group">
+          <label class="field-label">Пароль ещё раз</label>
+          <input class="field-input" type="password" id="regPassword2" placeholder="Повторите пароль..." onkeydown="if(event.key==='Enter')doRegister()">
+        </div>
+        <div class="auth-error" id="regError"></div>
+        <button class="btn-main" onclick="doRegister()">Создать аккаунт</button>
+      </div>
+      <div class="auth-switch">Уже есть аккаунт? <a onclick="showLogin()">Войти</a></div>
+    </div>
+  </div>
+</div>
+
+<!-- APP -->
+<div class="app-wrapper" id="appWrapper">
+  <div class="app-header">
+    <div class="container">
+      <div class="header-inner">
+        <div class="header-left">
+          <div class="header-dot" id="headerDot"></div>
+          <span class="header-brand"><strong>ТЗ</strong> · Задачи сервера</span>
+        </div>
+        <div class="header-right">
+          <div class="admin-tag" id="adminTag">
+            <div class="admin-tag-dot"></div>
+            ADMIN
+          </div>
+          <div style="position:relative">
+            <button class="profile-btn" id="profileBtn" onclick="toggleProfileDropdown()">
+              <span id="profileBtnIcon">👤</span>
+            </button>
+            <div class="profile-dropdown" id="profileDropdown">
+              <div class="pd-user">
+                <div class="pd-avatar" id="pdAvatar" onclick="uploadAvatar()">
+                  <span id="pdAvatarIcon">👤</span>
+                  <div class="pd-avatar-overlay">📷</div>
+                </div>
+                <input type="file" id="avatarInput" accept="image/*" style="display:none" onchange="handleAvatarUpload(event)">
+                <div>
+                  <div class="pd-name" id="pdName">User</div>
+                  <div class="pd-role" id="pdRole">Пользователь</div>
+                </div>
+              </div>
+              <button class="pd-item" onclick="openAdminAuthModal()">
+                <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M7 1v4M7 9v4M1 7h4M9 7h4" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>
+                Админ-доступ
+              </button>
+              <button class="pd-item" id="manageUsersBtn" style="display:none" onclick="openUsersModal()">
+                <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M5 6a2 2 0 100-4 2 2 0 000 4zM1 12c0-2.2 1.8-4 4-4s4 1.8 4 4M10 3v4M8 5h4" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                Управление пользователями
+              </button>
+              <div class="pd-divider"></div>
+              <button class="pd-item danger" onclick="doLogout()">
+                <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M5 12H3a1 1 0 01-1-1V3a1 1 0 011-1h2M9 10l3-3-3-3M12 7H5" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                Выйти
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <main>
+    <div class="container">
+      <div class="access-denied" id="accessDenied">
+        <div class="ad-icon">🔒</div>
+        <div class="ad-title">Доступ закрыт</div>
+        <div class="ad-desc">Для просмотра задач необходим пропуск. Введите код пропуска, полученный от администратора.</div>
+        <div class="ad-pass-form">
+          <input class="field-input" type="text" id="passCodeInput" placeholder="Код пропуска..." onkeydown="if(event.key==='Enter')submitPassCode()">
+          <button class="btn-sm" onclick="submitPassCode()">Активировать</button>
+        </div>
+        <div class="auth-error" id="passError" style="margin-top:12px"></div>
+      </div>
+
+      <div class="tasks-content" id="tasksContent">
+        <div class="tasks-hero">
+          <div class="tasks-hero-inner">
+            <div>
+              <h1>Техническое задание</h1>
+              <div class="tasks-hero-sub">Трекер задач для команды разработки</div>
+            </div>
+            <div class="stats-row">
+              <div class="stat">
+                <div class="stat-num" id="stat-total">0</div>
+                <div class="stat-label">Всего</div>
+              </div>
+              <div class="stat">
+                <div class="stat-num" style="color:var(--fix)" id="stat-fix">0</div>
+                <div class="stat-label">Багов</div>
+              </div>
+              <div class="stat">
+                <div class="stat-num" style="color:var(--feat)" id="stat-feat">0</div>
+                <div class="stat-label">Фич</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="toolbar">
+          <span class="toolbar-label">Фильтр:</span>
+          <button class="chip active" data-cat="all" onclick="setFilter('all',this)">Все</button>
+          <button class="chip" data-cat="fix" onclick="setFilter('fix',this)">Баги</button>
+          <button class="chip" data-cat="feature" onclick="setFilter('feature',this)">Фичи</button>
+          <button class="chip" data-cat="event" onclick="setFilter('event',this)">Ивенты</button>
+          <button class="chip" data-cat="balance" onclick="setFilter('balance',this)">Баланс</button>
+        </div>
+
+        <div class="search-wrap">
+          <svg class="search-icon" width="14" height="14" viewBox="0 0 14 14" fill="none"><circle cx="6" cy="6" r="4.5" stroke="currentColor" stroke-width="1.3"/><path d="M9.5 9.5L13 13" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>
+          <input id="search" type="text" placeholder="Поиск по задачам..." oninput="renderTasks()">
+        </div>
+
+        <div class="admin-bar" id="adminBar">
+          ⚡ Режим администратора — редактируй, добавляй и удаляй задачи
+          <button class="admin-bar-close" onclick="this.parentElement.classList.remove('visible')">✕</button>
+        </div>
+
+        <button class="add-task-btn" id="addTaskBtn" onclick="openAddModal()">
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M8 2v12M2 8h12" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+          Добавить задачу
+        </button>
+
+        <div id="list"></div>
+      </div>
+    </div>
+  </main>
+
+  <footer class="app-footer">
+    <div class="container">
+      <div class="footer-inner">
+        <span class="footer-text">Нажми на задачу — раскроется описание</span>
+        <span class="footer-text">Выполнено: <span id="done-count" style="color:var(--feat)">0</span> / <span id="done-total">0</span></span>
+      </div>
+    </div>
+  </footer>
+</div>
+
+<!-- MODALS -->
+<div class="modal-overlay" id="adminAuthModal">
+  <div class="modal" style="max-width:380px">
+    <div class="modal-header">
+      <div class="modal-title">Вход в админ-панель</div>
+      <button class="modal-close" onclick="closeModal('adminAuthModal')">✕</button>
+    </div>
+    <div class="form-field">
+      <label class="form-label">Мастер-пароль</label>
+      <input class="form-input" type="password" id="adminPassInput" placeholder="Введите мастер-пароль..." onkeydown="if(event.key==='Enter')checkAdminPass()">
+    </div>
+    <div class="auth-error" id="adminAuthError"></div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('adminAuthModal')">Отмена</button>
+      <button class="btn btn-primary" onclick="checkAdminPass()">Войти</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="taskModal">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title" id="taskModalTitle">Добавить задачу</div>
+      <button class="modal-close" onclick="closeModal('taskModal')">✕</button>
+    </div>
+    <input type="hidden" id="editTaskId">
+    <div class="form-row">
+      <div class="form-field" style="flex:0 0 80px">
+        <label class="form-label">ID #</label>
+        <input class="form-input" type="number" id="taskIdInput" placeholder="авто">
+      </div>
+      <div class="form-field">
+        <label class="form-label">Категория</label>
+        <select class="form-select" id="taskCatInput">
+          <option value="fix">🔴 Баг</option>
+          <option value="feature">🟢 Фича</option>
+          <option value="event">🟠 Ивент</option>
+          <option value="balance">🟣 Баланс</option>
+        </select>
+      </div>
+    </div>
+    <div class="form-field">
+      <label class="form-label">Название</label>
+      <input class="form-input" type="text" id="taskTitleInput" placeholder="Краткое описание задачи...">
+    </div>
+    <div class="form-field">
+      <label class="form-label">Описание</label>
+      <textarea class="form-textarea" id="taskDescInput" placeholder="Подробное описание..."></textarea>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('taskModal')">Отмена</button>
+      <button class="btn btn-primary" onclick="saveTask()">Сохранить</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="deleteModal">
+  <div class="modal" style="max-width:400px">
+    <div class="modal-header">
+      <div class="modal-title">Удалить задачу?</div>
+      <button class="modal-close" onclick="closeModal('deleteModal')">✕</button>
+    </div>
+    <p class="confirm-text">Это действие нельзя отменить. Задача будет удалена:</p>
+    <div class="confirm-task-title" id="deleteTaskTitle"></div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('deleteModal')">Отмена</button>
+      <button class="btn btn-danger" onclick="confirmDelete()">Удалить</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="usersModal">
+  <div class="modal" style="max-width:480px">
+    <div class="modal-header">
+      <div class="modal-title">Управление пользователями</div>
+      <button class="modal-close" onclick="closeModal('usersModal')">✕</button>
+    </div>
+    <div style="margin-bottom:16px">
+      <div class="form-field">
+        <label class="form-label">Код пропуска (для выдачи)</label>
+        <div style="display:flex;gap:8px;align-items:center">
+          <input class="form-input" type="text" id="passCodeDisplay" readonly style="font-family:'JetBrains Mono',monospace;letter-spacing:0.1em;text-align:center">
+          <button class="btn btn-ghost" style="white-space:nowrap;flex-shrink:0" onclick="generateNewPassCode()">🔄 Новый</button>
+        </div>
+      </div>
+    </div>
+    <div class="form-label" style="margin-bottom:10px">Зарегистрированные пользователи</div>
+    <div id="usersList"></div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('usersModal')">Закрыть</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const ADMIN_PASS = 'Xk9$mP2vL7nQ';
+
+const defaultTasks = [
+  { id: 2,  cat: 'fix',     title: 'Сокланы не могут выдать КТ при отключённом уроне в клане', desc: 'Если урон в клане отключён — запретить выдачу КТ союзникам.' },
+  { id: 4,  cat: 'fix',     title: 'Баг с падением под спавн + телепортация сносит тотем драконида', desc: 'При падении под спавн и последующей ТП сносит тотем драконида.' },
+  { id: 5,  cat: 'fix',     title: '/fly отключается в зоне аирдропа при /gamemode 3', desc: 'Не успевает телепортироваться — умирает. Не отключать /fly для ГМ3.' },
+  { id: 6,  cat: 'fix',     title: 'Фикс редстоуна в боевом пропуске', desc: 'Редстоун в БП работает некорректно. Разобраться и починить.' },
+  { id: 7,  cat: 'balance', title: 'Удача 5 не работает (AntiWork)', desc: 'Зачарование Удача 5 является AntiWork. Проверить и пофиксить механику.' },
+  { id: 9,  cat: 'fix',     title: 'Ножницы не ломаются по левой кнопке мыши', desc: 'По описанию должны ломаться при нажатии ЛКМ — на деле не работает.' },
+  { id: 10, cat: 'fix',     title: 'Серый префикс КП-доната у Демона и Люцифера в кейсах', desc: 'В кейсах отображается лишний серый префикс донатов — убрать.' },
+  { id: 11, cat: 'event',   title: 'Ивент «Тёмная башня» с РВ', desc: 'Реализовать ивент по аналогии с РВ. Расписание: каждый день в 15:30 и 20:30 МСК.' },
+  { id: 12, cat: 'fix',     title: '🔴 Критично: вещь исчезает при вкладывании в кейс', desc: 'Предмет кладётся в кейс и бесследно пропадает. Критический баг.' },
+  { id: 13, cat: 'feature', title: 'Добавить в кейс с китами: Сатана, Люцифер, Год', desc: 'В кейс с китами добавить ещё 3 кита.' },
+  { id: 14, cat: 'feature', title: 'DG Plus — скип квестов и улучшение системы', desc: 'Дать возможность скипать квесты с DG+. Добавить номер квеста в /skipquest.' },
+  { id: 15, cat: 'fix',     title: 'Задание «Зачарование незеритового меча» не засчитывается', desc: 'Квест с зачаром незеритового меча не выполняется.' },
+  { id: 16, cat: 'feature', title: 'Случайный дроп в аирдропах', desc: 'Дроп должен каждый раз отличаться. Количество предметов: от 9 до 25.' },
+  { id: 17, cat: 'fix',     title: 'Обновить описания кейсов (Кобра → Год) + редактор', desc: 'Заменить «Кобру» на «Года». Добавить редактирование описаний.' },
+  { id: 18, cat: 'balance', title: 'Босс только Пн/Ср/Пт в 17:30 МСК', desc: 'Убрать ежедневный спавн. Новое расписание: Пн, Ср, Пт — 17:30 МСК.' },
+  { id: 19, cat: 'feature', title: 'GrowGarden — опыт за игру на сервере', desc: 'Реализовать как на РВ: начислять опыт за активность на сервере.' },
+  { id: 20, cat: 'feature', title: 'Добавить команды отключения роли', desc: 'Реализовать: /offcurator, /offmladmin, /offadmin, /offowner.' },
+  { id: 21, cat: 'fix',     title: 'Сезонные головы: проклятие утраты, описание, эффекты Тора', desc: 'Добавить проклятие утраты на все сезонные головы. Исправить описания.' },
+  { id: 22, cat: 'balance', title: 'Усилить мобов-участников ивентов', desc: 'Ивентовые мобы должны быть сильнее и быстрее.' },
+  { id: 23, cat: 'fix',     title: 'Ваниш — нормальная невидимость вместо «Невидимость 2»', desc: 'При ваните выдавать настоящую невидимость.' },
+  { id: 24, cat: 'fix',     title: 'Убрать спам в чат при убийстве мобов в клане', desc: 'Не отправлять уведомления о клановых очках при каждом убийстве моба.' },
+  { id: 25, cat: 'feature', title: 'Добавить в РП: ТТ и Осколок бога', desc: 'Добавить предметы «ТТ» и «Осколок бога» в раздел РП.' },
+  { id: 26, cat: 'feature', title: 'Больше регионов и приватов в донате Пегас', desc: 'Увеличить количество регионов и приватов для Пегаса.' },
+  { id: 27, cat: 'fix',     title: '/fly не сбрасывается при входе на арену', desc: 'Принудительно снимать /fly при входе в зону арены.' },
+  { id: 28, cat: 'fix',     title: 'Нельзя выйти у босса', desc: 'Проблема с выходом в зоне босса.' },
+  { id: 29, cat: 'fix',     title: 'Ловушку можно сломать буром', desc: 'Защитить ловушки от разрушения буром.' },
+  { id: 8,  cat: 'feature', title: 'Скидка автоматически при наличии DG+', desc: 'Автоматически применять скидку для DG Plus.' },
+];
+
+function getUsers() { return JSON.parse(localStorage.getItem('tz_users') || '{}'); }
+function saveUsers(u) { localStorage.setItem('tz_users', JSON.stringify(u)); }
+function getSession() { return localStorage.getItem('tz_session') || null; }
+function setSession(u) { localStorage.setItem('tz_session', u); }
+function clearSession() { localStorage.removeItem('tz_session'); }
+function getPassCode() {
+  let c = localStorage.getItem('tz_passcode');
+  if (!c) { c = generatePassCode(); localStorage.setItem('tz_passcode', c); }
+  return c;
+}
+function setPassCode(c) { localStorage.setItem('tz_passcode', c); }
+function getTasks() { return JSON.parse(localStorage.getItem('tz_tasks') || 'null') || defaultTasks; }
+function saveTasks(t) { localStorage.setItem('tz_tasks', JSON.stringify(t)); }
+function getDone() { return new Set(JSON.parse(localStorage.getItem('tz_done') || '[]')); }
+function saveDone(s) { localStorage.setItem('tz_done', JSON.stringify([...s])); }
+
+function generatePassCode() {
+  const ch = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  let c = '';
+  for (let i = 0; i < 3; i++) {
+    if (i > 0) c += '-';
+    for (let j = 0; j < 4; j++) c += ch[Math.floor(Math.random() * ch.length)];
+  }
+  return c;
+}
+
+let tasks = getTasks();
+let doneSet = getDone();
+let currentFilter = 'all';
+let currentUser = null;
+let isAdmin = false;
+let deleteTargetId = null;
+const labels = { fix: 'Баг', feature: 'Фича', event: 'Ивент', balance: 'Баланс' };
+
+function showLogin() {
+  document.getElementById('loginView').style.display = '';
+  document.getElementById('registerView').style.display = 'none';
+  document.getElementById('loginError').textContent = '';
+  reanimateCard();
+}
+function showRegister() {
+  document.getElementById('loginView').style.display = 'none';
+  document.getElementById('registerView').style.display = '';
+  document.getElementById('regError').textContent = '';
+  reanimateCard();
+}
+function reanimateCard() {
+  const c = document.getElementById('authCard');
+  c.style.animation = 'none';
+  void c.offsetHeight;
+  c.style.animation = 'cardIn 0.4s ease both';
+}
+
+function doRegister() {
+  const u = document.getElementById('regUsername').value.trim();
+  const p = document.getElementById('regPassword').value;
+  const p2 = document.getElementById('regPassword2').value;
+  const e = document.getElementById('regError');
+  if (!u || u.length < 3) { e.textContent = 'Логин минимум 3 символа'; return; }
+  if (!p || p.length < 4) { e.textContent = 'Пароль минимум 4 символа'; return; }
+  if (p !== p2) { e.textContent = 'Пароли не совпадают'; return; }
+  const users = getUsers();
+  if (users[u]) { e.textContent = 'Логин уже занят'; return; }
+  users[u] = { password: p, avatar: null, hasPass: false, isAdmin: false };
+  saveUsers(users);
+  setSession(u);
+  enterApp(u);
+}
+
+function doLogin() {
+  const u = document.getElementById('loginUsername').value.trim();
+  const p = document.getElementById('loginPassword').value;
+  const e = document.getElementById('loginError');
+  if (!u || !p) { e.textContent = 'Заполните все поля'; return; }
+  const users = getUsers();
+  if (!users[u] || users[u].password !== p) { e.textContent = 'Неверный логин или пароль'; return; }
+  setSession(u);
+  enterApp(u);
+}
+
+function doLogout() {
+  clearSession();
+  isAdmin = false;
+  currentUser = null;
+  document.getElementById('appWrapper').style.display = 'none';
+  document.getElementById('authScreen').style.display = 'flex';
+  document.getElementById('loginUsername').value = '';
+  document.getElementById('loginPassword').value = '';
+  showLogin();
+  closeProfileDropdown();
+}
+
+function enterApp(username) {
+  currentUser = username;
+  const users = getUsers();
+  const user = users[username];
+  document.getElementById('authScreen').style.display = 'none';
+  document.getElementById('appWrapper').style.display = 'block';
+  document.getElementById('pdName').textContent = username;
+  updateAvatar(user.avatar);
+  isAdmin = !!user.isAdmin;
+  updateAdminUI();
+  if (user.hasPass || user.isAdmin) showTasks();
+  else showAccessDenied();
+}
+
+function showTasks() {
+  document.getElementById('accessDenied').classList.remove('visible');
+  document.getElementById('tasksContent').classList.add('visible');
+  updateStats();
+  renderTasks();
+}
+function showAccessDenied() {
+  document.getElementById('accessDenied').classList.add('visible');
+  document.getElementById('tasksContent').classList.remove('visible');
+}
+
+function updateAdminUI() {
+  const els = {
+    dot: document.getElementById('headerDot'),
+    tag: document.getElementById('adminTag'),
+    bar: document.getElementById('adminBar'),
+    btn: document.getElementById('addTaskBtn'),
+    mgr: document.getElementById('manageUsersBtn'),
+    role: document.getElementById('pdRole')
+  };
+  if (isAdmin) {
+    els.dot.classList.add('admin-active');
+    els.tag.classList.add('visible');
+    els.bar.classList.add('visible');
+    els.btn.classList.add('visible');
+    els.mgr.style.display = '';
+    els.role.textContent = 'Администратор';
+  } else {
+    els.dot.classList.remove('admin-active');
+    els.tag.classList.remove('visible');
+    els.bar.classList.remove('visible');
+    els.btn.classList.remove('visible');
+    els.mgr.style.display = 'none';
+    els.role.textContent = 'Пользователь';
+  }
+  renderTasks();
+}
+
+function updateAvatar(data) {
+  const bi = document.getElementById('profileBtnIcon');
+  const pi = document.getElementById('pdAvatarIcon');
+  if (data) {
+    bi.innerHTML = '<img src="' + data + '" alt="">';
+    pi.innerHTML = '<img src="' + data + '" alt="">';
+  } else {
+    bi.textContent = '👤';
+    pi.textContent = '👤';
+  }
+}
+
+function uploadAvatar() { document.getElementById('avatarInput').click(); }
+function handleAvatarUpload(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+  if (file.size > 500000) { alert('Макс. 500KB'); return; }
+  const reader = new FileReader();
+  reader.onload = function(ev) {
+    const img = new Image();
+    img.onload = function() {
+      const canvas = document.createElement('canvas');
+      canvas.width = canvas.height = 128;
+      const ctx = canvas.getContext('2d');
+      const min = Math.min(img.width, img.height);
+      ctx.drawImage(img, (img.width - min) / 2, (img.height - min) / 2, min, min, 0, 0, 128, 128);
+      const url = canvas.toDataURL('image/jpeg', 0.8);
+      const users = getUsers();
+      users[currentUser].avatar = url;
+      saveUsers(users);
+      updateAvatar(url);
+    };
+    img.src = ev.target.result;
+  };
+  reader.readAsDataURL(file);
+  e.target.value = '';
+}
+
+function toggleProfileDropdown() { document.getElementById('profileDropdown').classList.toggle('open'); }
+function closeProfileDropdown() { document.getElementById('profileDropdown').classList.remove('open'); }
+document.addEventListener('click', function(e) {
+  if (!e.target.closest('.profile-btn') && !e.target.closest('.profile-dropdown')) closeProfileDropdown();
+});
+
+function openAdminAuthModal() {
+  closeProfileDropdown();
+  if (isAdmin) {
+    isAdmin = false;
+    const users = getUsers();
+    users[currentUser].isAdmin = false;
+    saveUsers(users);
+    updateAdminUI();
+    return;
+  }
+  document.getElementById('adminPassInput').value = '';
+  document.getElementById('adminAuthError').textContent = '';
+  openModal('adminAuthModal');
+  setTimeout(() => document.getElementById('adminPassInput').focus(), 150);
+}
+
+function checkAdminPass() {
+  const val = document.getElementById('adminPassInput').value;
+  if (val === ADMIN_PASS) {
+    closeModal('adminAuthModal');
+    isAdmin = true;
+    const users = getUsers();
+    users[currentUser].isAdmin = true;
+    users[currentUser].hasPass = true;
+    saveUsers(users);
+    updateAdminUI();
+    showTasks();
+  } else {
+    document.getElementById('adminAuthError').textContent = 'Неверный мастер-пароль';
+    document.getElementById('adminPassInput').value = '';
+    document.getElementById('adminPassInput').focus();
+  }
+}
+
+function submitPassCode() {
+  const input = document.getElementById('passCodeInput').value.trim().toUpperCase();
+  const err = document.getElementById('passError');
+  if (input === getPassCode()) {
+    const users = getUsers();
+    users[currentUser].hasPass = true;
+    saveUsers(users);
+    err.textContent = '';
+    showTasks();
+  } else {
+    err.textContent = 'Неверный код пропуска';
+  }
+}
+
+function openUsersModal() {
+  closeProfileDropdown();
+  document.getElementById('passCodeDisplay').value = getPassCode();
+  renderUsersList();
+  openModal('usersModal');
+}
+function generateNewPassCode() {
+  const code = generatePassCode();
+  setPassCode(code);
+  document.getElementById('passCodeDisplay').value = code;
+}
+function renderUsersList() {
+  const users = getUsers();
+  const container = document.getElementById('usersList');
+  const names = Object.keys(users);
+  if (!names.length) {
+    container.innerHTML = '<div style="text-align:center;color:var(--muted);padding:16px;font-size:13px">Нет пользователей</div>';
+    return;
+  }
+  container.innerHTML = names.map(name => {
+    const u = users[name];
+    const self = name === currentUser;
+    return '<div class="user-list-item"><div><div class="user-list-name">' + escHtml(name) +
+      (self ? ' <span style="color:var(--muted);font-size:11px">(вы)</span>' : '') +
+      (u.isAdmin ? ' <span style="color:var(--admin);font-size:11px">admin</span>' : '') +
+      '</div></div><div style="display:flex;align-items:center;gap:8px"><span class="user-list-status ' +
+      (u.hasPass ? 'has-pass">Пропуск' : 'no-pass">Нет доступа') + '</span>' +
+      (!self ? '<button class="toggle-pass-btn ' + (u.hasPass ? 'revoke' : '') +
+      '" onclick="toggleUserPass(\'' + escHtml(name) + '\')">' +
+      (u.hasPass ? 'Отозвать' : 'Выдать') + '</button>' : '') +
+      '</div></div>';
+  }).join('');
+}
+function toggleUserPass(username) {
+  const users = getUsers();
+  if (!users[username]) return;
+  users[username].hasPass = !users[username].hasPass;
+  saveUsers(users);
+  renderUsersList();
+}
+
+function updateStats() {
+  document.getElementById('stat-total').textContent = tasks.length;
+  document.getElementById('stat-fix').textContent = tasks.filter(t => t.cat === 'fix').length;
+  document.getElementById('stat-feat').textContent = tasks.filter(t => t.cat === 'feature').length;
+  document.getElementById('done-count').textContent = doneSet.size;
+  document.getElementById('done-total').textContent = tasks.length;
+}
+
+function renderTasks() {
+  const q = document.getElementById('search') ? document.getElementById('search').value.toLowerCase() : '';
+  const list = document.getElementById('list');
+  if (!list) return;
+
+  let filtered = tasks.filter(t => {
+    if (currentFilter !== 'all' && t.cat !== currentFilter) return false;
+    if (q && !t.title.toLowerCase().includes(q) && !(t.desc || '').toLowerCase().includes(q)) return false;
+    return true;
+  });
+
+  if (!filtered.length) { list.innerHTML = '<div class="empty">Ничего не найдено</div>'; return; }
+
+  const aa = isAdmin ? '<div class="task-actions visible"><button class="task-action-btn edit" title="Редактировать" onclick="editTask(event,TASK_ID)"><svg width="13" height="13" viewBox="0 0 13 13" fill="none"><path d="M9 1.5l2.5 2.5-7 7H2v-2.5l7-7z" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/></svg></button><button class="task-action-btn del" title="Удалить" onclick="deleteTask(event,TASK_ID)"><svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M1.5 1.5l9 9M10.5 1.5l-9 9" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></button></div>' : '';
+
+  list.innerHTML = filtered.map((t, i) =>
+    '<div class="task' + (doneSet.has(t.id) ? ' done' : '') + '" id="task-' + t.id + '" style="animation-delay:' + (i * 0.03) + 's" onclick="toggleExpand(event,' + t.id + ')"><div class="task-id"><div class="check" onclick="toggleDone(event,' + t.id + ')">✓</div><span>#' + t.id + '</span></div><div class="task-main"><div class="task-title">' + escHtml(t.title) + '</div><div class="task-desc">' + escHtml(t.desc || '—') + '</div></div><div class="task-right"><div class="task-badge badge-' + t.cat + '">' + labels[t.cat] + '</div>' + aa.replaceAll('TASK_ID', t.id) + '</div></div>'
+  ).join('');
+}
+
+function openAddModal() {
+  document.getElementById('editTaskId').value = '';
+  document.getElementById('taskModalTitle').textContent = 'Добавить задачу';
+  document.getElementById('taskIdInput').value = '';
+  document.getElementById('taskCatInput').value = 'fix';
+  document.getElementById('taskTitleInput').value = '';
+  document.getElementById('taskDescInput').value = '';
+  openModal('taskModal');
+  setTimeout(() => document.getElementById('taskTitleInput').focus(), 150);
+}
+function openEditModal(id) {
+  const t = tasks.find(x => x.id === id);
+  if (!t) return;
+  document.getElementById('editTaskId').value = id;
+  document.getElementById('taskModalTitle').textContent = 'Редактировать задачу';
+  document.getElementById('taskIdInput').value = t.id;
+  document.getElementById('taskCatInput').value = t.cat;
+  document.getElementById('taskTitleInput').value = t.title;
+  document.getElementById('taskDescInput').value = t.desc;
+  openModal('taskModal');
+  setTimeout(() => document.getElementById('taskTitleInput').focus(), 150);
+}
+function saveTask() {
+  const editId = document.getElementById('editTaskId').value;
+  const idVal = parseInt(document.getElementById('taskIdInput').value) || null;
+  const cat = document.getElementById('taskCatInput').value;
+  const title = document.getElementById('taskTitleInput').value.trim();
+  const desc = document.getElementById('taskDescInput').value.trim();
+  if (!title) {
+    const el = document.getElementById('taskTitleInput');
+    el.focus(); el.style.borderColor = 'var(--fix)';
+    setTimeout(() => el.style.borderColor = '', 1200);
+    return;
+  }
+  if (editId) {
+    const idx = tasks.findIndex(x => x.id === parseInt(editId));
+    if (idx !== -1) tasks[idx] = { id: idVal !== null ? idVal : tasks[idx].id, cat, title, desc: desc || '—' };
+  } else {
+    const newId = idVal !== null ? idVal : (Math.max(0, ...tasks.map(t => t.id)) + 1);
+    tasks.push({ id: newId, cat, title, desc: desc || '—' });
+  }
+  saveTasks(tasks);
+  closeModal('taskModal');
+  updateStats();
+  renderTasks();
+}
+
+function openDeleteModal(id) {
+  const t = tasks.find(x => x.id === id);
+  if (!t) return;
+  deleteTargetId = id;
+  document.getElementById('deleteTaskTitle').textContent = t.title;
+  openModal('deleteModal');
+}
+function confirmDelete() {
+  if (deleteTargetId === null) return;
+  tasks = tasks.filter(t => t.id !== deleteTargetId);
+  doneSet.delete(deleteTargetId);
+  saveTasks(tasks); saveDone(doneSet);
+  closeModal('deleteModal');
+  updateStats(); renderTasks();
+}
+
+function editTask(e, id) { e.stopPropagation(); openEditModal(id); }
+function deleteTask(e, id) { e.stopPropagation(); openDeleteModal(id); }
+function toggleExpand(e, id) {
+  if (e.target.closest('.task-action-btn') || e.target.classList.contains('check')) return;
+  document.getElementById('task-' + id).classList.toggle('expanded');
+}
+function toggleDone(e, id) {
+  e.stopPropagation();
+  if (doneSet.has(id)) doneSet.delete(id); else doneSet.add(id);
+  saveDone(doneSet); updateStats();
+  const el = document.getElementById('task-' + id);
+  if (el) el.classList.toggle('done', doneSet.has(id));
+}
+function setFilter(cat, el) {
+  currentFilter = cat;
+  document.querySelectorAll('.chip').forEach(c => c.classList.remove('active'));
+  el.classList.add('active');
+  renderTasks();
+}
+
+function escHtml(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+function openModal(id) { document.getElementById(id).classList.add('open'); }
+function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+
+document.querySelectorAll('.modal-overlay').forEach(o => {
+  o.addEventListener('click', e => { if (e.target === o) o.classList.remove('open'); });
+});
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') {
+    document.querySelectorAll('.modal-overlay.open').forEach(m => m.classList.remove('open'));
+    closeProfileDropdown();
+  }
+});
+
+(function init() {
+  const s = getSession();
+  if (s) {
+    const users = getUsers();
+    if (users[s]) { enterApp(s); return; }
+    clearSession();
+  }
+  document.getElementById('authScreen').style.display = 'flex';
+  document.getElementById('appWrapper').style.display = 'none';
+})();
+</script>
+</body>
+</html>
